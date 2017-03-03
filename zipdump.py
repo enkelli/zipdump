@@ -92,6 +92,30 @@ class CentralDirEntry(EntryBase):
             r += "\n" + self.comment
         return r
 
+    def reprPretty(self):
+        r = "PK.0102: %s\n" % self.__class__.__name__
+        r += "\tversion made by:        %04x\n" % self.createVersion
+        r += "\tversion needed to extr: %04x\n" % self.neededVersion
+        r += "\tflags:                  %04x\n" % self.flags
+        r += "\tcompression:            %04x\n" % self.method
+        r += "\ttime & date:            %08x\n" % self.timestamp
+        r += "\tcrc-32:                 %08x\n" % self.crc32
+        r += "\tcompressed size:        %08x\n" % self.compressedSize
+        r += "\toriginal size:          %08x\n" % self.originalSize
+        r += "\tname length:            %04x\n" % self.nameLength
+        r += "\textra field length:     %04x\n" % self.extraLength
+        r += "\tcomment length:         %04x\n" % self.commentLength
+        r += "\tdisk number start:      %04x\n" % self.diskNrStart
+        r += "\tinternal attributes:    %04x\n" % self.zipAttrs
+        r += "\texternal attributes:    %08x\n" % self.osAttrs
+        r += "\tlocal header offset:    %08x\n" % self.dataOfs
+        r += "\tfile name offset        %08x" % self.nameOffset
+        r += " - " + self.name + "\n" if self.name else "\n"
+        r += "\textra field offset      %08x\n" % self.extraOffset
+        r += "\tcomment offset          %08x" % self.commentOffset
+        r += "\t" + self.comment + "\n" if self.comment else "\n"
+        r += "\tend offset              %08x\n" % self.endOffset
+        return r
 
 class LocalFileHeader(EntryBase):
     HeaderSize = 26
@@ -136,6 +160,23 @@ class LocalFileHeader(EntryBase):
             r += " - " + self.name
         return r
 
+    def reprPretty(self):
+        r = "PK.0304: %s\n" % self.__class__.__name__
+        r += "\tversion needed to extr: %04x\n" % self.neededVersion
+        r += "\tflags:                  %04x\n" % self.flags
+        r += "\tcompression:            %04x\n" % self.method
+        r += "\ttime & date:            %08x\n" % self.timestamp
+        r += "\tcrc-32:                 %08x\n" % self.crc32
+        r += "\tcompressed size:        %08x\n" % self.compressedSize
+        r += "\toriginal size:          %08x\n" % self.originalSize
+        r += "\tname length:            %04x\n" % self.nameLength
+        r += "\textra field length:     %04x\n" % self.extraLength
+        r += "\tname offset:            %08x" % self.nameOffset
+        r += " - " + self.name + "\n" if self.name else "\n"
+        r += "\textra offset:           %08x\n" % self.extraOffset
+        r += "\tdata offset:            %08x\n" % self.dataOffset
+        r += "\tend offset:             %08x\n" % self.endOffset
+        return r
 
 class EndOfCentralDir(EntryBase):
     HeaderSize = 18
@@ -171,6 +212,20 @@ class EndOfCentralDir(EntryBase):
             r += "\n" + self.comment
         return r
 
+    def reprPretty(self):
+        r = "PK.0506: %s\n" % self.__class__.__name__
+        r += "\tdisk number:             %04x\n" % self.thisDiskNr
+        r += "\tcentral dir disk number: %04x\n" % self.startDiskNr
+        r += "\tcentral dir entries:     %04x\n" % self.thisEntries
+        r += "\ttotal entries:           %04x\n" % self.totalEntries
+        r += "\tcentral dir size:        %08x\n" % self.dirSize
+        r += "\tcentral dir offset:      %08x\n" % self.dirOffset
+        r += "\tcomment length:          %04x\n" % self.commentLength
+        r += "\tcomment offset:          %08x" % self.commentOffset
+        r += "\t" + self.comment + "\n" if self.comment else "\n"
+        r += "\tend offset:              %08x\n" % self.endOffset
+        return r
+
 
 class DataDescriptor(EntryBase):
     HeaderSize = 12
@@ -189,6 +244,14 @@ class DataDescriptor(EntryBase):
         return "PK.0708: %08x %08x %08x |  %08x" % (
             self.crc, self.compSize, self.uncompSize,
             self.endOffset)
+
+    def reprPretty(self):
+        r = "PK.0708: %s\n" % self.__class__.__name__
+        r += "\tcrc-32:          %08x\n" % self.crc
+        r += "\tcompressed size: %08x\n" % self.compSize
+        r += "\toriginal size:   %08x\n" % self.uncompSize
+        r += "\tend offset:      %08x\n" % self.endOffset
+        return r
 
 
 # todo
@@ -329,7 +392,10 @@ def processfile(args, fh):
     else:
         for entry in findPKHeaders(args, fh):
             entry.loaditems(fh)
-            print("%08x: %s" % (entry.pkOffset, entry))
+            if args.pretty:
+                print("%08x: %s" % (entry.pkOffset, entry.reprPretty()))
+            else:
+                print("%08x: %s" % (entry.pkOffset, entry))
 
 
 def DirEnumerator(args, path):
@@ -387,6 +453,7 @@ def main():
     parser.add_argument('--length', '-l', type=int, help='max length of data to process')
     parser.add_argument('--quick', '-q', action='store_true', help='Quick dir scan. This is quick with URLs as well.')
     parser.add_argument('--chunksize', type=int, default=1024*1024)
+    parser.add_argument('--pretty', action='store_true', help='make output easier to read')
     parser.add_argument('FILES', type=str, nargs='*', help='Files or URLs')
     args = parser.parse_args()
 
